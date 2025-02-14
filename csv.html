@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        .contents {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-rows: 60px auto 60px;
+        }
+
+        header {
+            padding: 10px;
+            background-color: whitesmoke;
+        }
+        h2, h4 {
+            margin: 0;
+            padding: 0;
+        }
+        footer {
+            padding: 10px;
+            background-color: whitesmoke;
+        }
+        main {
+            padding: 10px;
+        }
+        .box {
+            border: 1px solid gainsboro;
+            border-radius: 5px;
+            padding: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            background-color: whitesmoke;
+        }
+        .box > * {
+            margin: 5px;
+        }
+        .box > select, .box > input[type="text"] {
+            width: 30vw;
+        }
+        .box > button {
+            width: 20vw;
+            height: 30px;
+            background-color: gainsboro;
+            border: 1px solid gray;
+        }
+        .box > input[type="date"] {
+            width: 12vw;
+        }
+        .date_box {
+            display: flex;
+            flex-direction: row;
+        }
+        .date_box > span {
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="contents">
+        <header>
+            <h2>download item data</h2>
+        </header>
+        <main>
+            <div class="box">
+                <h4>openHAB URL</h4>
+                <input type="text" id="BaseUrl" value="http://192.168.11.101:52080">
+                <button id="GetItemNameButton">get item name</button>
+            </div>
+            <div class="box">
+                <h4>items</h4>
+                <select name="itemsSelect" id="itemSelect"></select><!-- /# -->
+                <h4>pickup period</h4>
+                <div class="date_box">
+                    <input type="date" name="dateFrom" id="dateFrom">
+                    <span> ～ </span>
+                    <input type="date" name="dateTo" id="dateTo">
+                </div>
+                <button id="GetPersistenceDataButton">get persistence data</button>
+            </div>
+        </main>
+        <footer>
+
+        </footer>
+    </div><!-- /.contents -->
+
+    <script type="text/javascript">
+
+        const baseUrl = document.getElementById("BaseUrl");
+        const itemSelect = document.getElementById("itemSelect");
+        const getItemNameButton = document.getElementById("GetItemNameButton");
+        const getPersistenceDataButton = document.getElementById("GetPersistenceDataButton");
+        
+        const dateFromEl = document.getElementById("dateFrom");
+        const dateToEl = document.getElementById("dateTo");
+        const nowDate = new Date();
+        dateFromEl.value = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).toLocaleDateString('sv-SE');
+        dateToEl.value = new Date(nowDate.getFullYear(), nowDate.getMonth()+1, 0).toLocaleDateString('sv-SE');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const url = localStorage.getItem('baseUrl');
+            if (url != '') { 
+                baseUrl.value = url;
+            }
+        });
+
+        baseUrl.onchange = function() {
+            if (baseUrl.value != ''){
+                localStorage.setItem('baseUrl', baseUrl.value);
+            }
+        }
+
+        getItemNameButton.onclick = function(){
+
+            var xhr = new XMLHttpRequest();
+            var url = `${baseUrl.value}/rest/items`;
+            console.log(url);
+
+            xhr.open('GET', url);
+            xhr.send();
+
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState === 4 && xhr.status === 200) {
+                    localStorage.setItem('baseUrl', baseUrl.value);
+                    var items = JSON.parse(xhr.response);
+                    items.map(x => x.name).forEach(x => {
+                        var opt = document.createElement('option');
+                        opt.value = x;
+                        opt.text = x;
+                        itemSelect.appendChild(opt);
+                    }); 
+                }
+            }
+        }
+
+        getPersistenceDataButton.onclick = function(){
+
+            if (itemSelect.selectedIndex == -1){
+                alert('please select an item.');
+                return;
+            }
+
+            var itemName = itemSelect.value;
+            var dateFrom = dateFromEl.value + 'T00:00:00';
+            var dateTo = dateToEl.value + 'T23:59:59';
+
+            var xhr = new XMLHttpRequest();
+            var url = `${baseUrl.value}/rest/persistence/items/${itemName}?starttime=${encodeURIComponent(dateFrom)}&endtime=${encodeURIComponent(dateTo)}`;
+            // console.log(url);
+
+            xhr.open('GET', url);
+            xhr.send();
+
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState === 4 && xhr.status === 200) {
+                    var json = JSON.parse(xhr.response);
+                    download_csv(persistence_to_csv(json), `${itemName}.csv`);
+                }
+            }
+        }
+
+        function persistence_to_csv(json) {
+            const headers = Object.keys(json.data[0]); // -> array
+            const rows = [headers.join(",")];          // -> string
+
+            for (const row of json.data) {
+                const vals = headers.map(x => row[x])
+                const rec = unixtime_to_localtime(vals[0]) + ',' + vals[1];
+                rows.push(rec);
+            }
+            return rows.join("\n")
+        }
+ 
+        function download_csv(csv, filename = "data.csv") {
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+ 
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+ 
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function unixtime_to_localtime(value) {
+            const date = new Date(value);
+            const localtime = date.toLocaleDateString('ja-jp') + ' ' + date.toLocaleTimeString('ja-jp');
+            return localtime;
+        } 
+    </script>
+</body>
+</html>
