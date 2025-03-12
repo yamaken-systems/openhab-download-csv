@@ -134,11 +134,14 @@
             xhr.onreadystatechange = function() {
                 if(xhr.readyState === 4 && xhr.status === 200) {
                     localStorage.setItem('baseUrl', baseUrl.value);
+
                     var items = JSON.parse(xhr.response);
-                    items.map(x => x.name).forEach(x => {
+                    console.log(items);
+
+                    items.map(x => {
                         var opt = document.createElement('option');
-                        opt.value = x;
-                        opt.text = x;
+                        opt.value = x.name;
+                        opt.text = x.name;
                         itemSelect.appendChild(opt);
                     }); 
                 }
@@ -176,9 +179,14 @@
             const rows = [headers.join(",")];          // -> string
 
             for (const row of json.data) {
-                const vals = headers.map(x => row[x])
-                const rec = unixtime_to_localtime(vals[0]) + ',' + vals[1];
-                rows.push(rec);
+                const vals = headers.map(x => {
+                    if (x == 'time') {
+                        return unixtime_to_localtime(row[x]);
+                    }else{
+                        return row[x];
+                    } 
+                });
+                rows.push(vals.join(","));
             }
             return rows.join("\n")
         }
