@@ -102,7 +102,7 @@
         const itemSelect = document.getElementById("itemSelect");
         const getItemNameButton = document.getElementById("GetItemNameButton");
         const getPersistenceDataButton = document.getElementById("GetPersistenceDataButton");
-        
+
         const dateFromEl = document.getElementById("dateFrom");
         const dateToEl = document.getElementById("dateTo");
         const nowDate = new Date();
@@ -111,7 +111,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             const url = localStorage.getItem('baseUrl');
-            if (url != '') { 
+            if (url != '') {
                 baseUrl.value = url;
             }
         });
@@ -136,14 +136,14 @@
                     localStorage.setItem('baseUrl', baseUrl.value);
 
                     var items = JSON.parse(xhr.response);
-                    console.log(items);
+                    //console.log(items);
 
                     items.map(x => {
                         var opt = document.createElement('option');
                         opt.value = x.name;
                         opt.text = x.name;
                         itemSelect.appendChild(opt);
-                    }); 
+                    });
                 }
             }
         }
@@ -184,21 +184,21 @@
                         return unixtime_to_localtime(row[x]);
                     }else{
                         return row[x];
-                    } 
+                    }
                 });
                 rows.push(vals.join(","));
             }
             return rows.join("\n")
         }
- 
+
         function download_csv(csv, filename = "data.csv") {
             const blob = new Blob([csv], { type: "text/csv" });
             const url = URL.createObjectURL(blob);
- 
+
             const a = document.createElement("a");
             a.href = url;
             a.download = filename;
- 
+
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -208,7 +208,7 @@
             const date = new Date(value);
             const localtime = date.toLocaleDateString('ja-jp') + ' ' + date.toLocaleTimeString('ja-jp');
             return localtime;
-        } 
+        }
     </script>
 </body>
 </html>
